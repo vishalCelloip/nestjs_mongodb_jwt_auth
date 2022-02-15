@@ -3,20 +3,29 @@ import {
   Controller,
   Get,
   Post,
-  Put,
+  UseGuards,
+  Param,
+  Req,
+  UsePipes,
   Query,
+  Put,
   Res,
   HttpStatus,
-  UseGuards,
-  UsePipes,
   ValidationPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
 import { RegisterDTO } from 'src/Admin_Module/auth/dto/register.dto';
 import { UserService } from 'src/Admin_Module/auth/user.service';
 import { AuthService } from './auth.service';
 import { LoginDTO } from './dto/login.dto';
-import {ChangePasswordDTO} from 'src/Admin_Module/auth/dto/changePassword.dto';
+import { ChangePasswordDTO } from 'src/Admin_Module/auth/dto/changePassword.dto';
+import { User } from 'src/Admin_Module/interfaces/user.interface';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+// import * as bcrypt from 'bcrypt';
 
 @Controller('auth')
 export class AuthController {
@@ -55,16 +64,55 @@ export class AuthController {
     const token = await this.authService.signPayload(payload);
     return { user, token };
   }
-  @Post('logout')
-  async logout(){
-    return {message:'Logout Successfully'}
+  @Get('logout')
+  async logout() {
+    return { message: 'Logout Successfully' };
   }
+
   @Put('/changepassword')
-    async changepassword(@Res() res, @Query('userID') userID, @Body() changePasswordDTO: ChangePasswordDTO) {
-        const user = await this.userService.changePassword(userID, changePasswordDTO);
-        return res.status(HttpStatus.OK).json({
-            message: 'password change successfully ',
-            user
-        });
+  @UsePipes(ValidationPipe)
+  async changepassword(
+    @Query('userID') userID,
+    @Body() changePasswordDTO: ChangePasswordDTO,
+  ) {
+    return await this.userService.changePassword(userID, changePasswordDTO);
+  }
+  // upload image
+  @Post('upload_image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const name = file.originalname.split('.')[0];
+          const fileExtention = file.originalname.split('.')[1];
+          const newFileName =
+            name.split('').join('') + Date.now() + '.' + fileExtention;
+          cb(null, newFileName);
+        },
+      }),
+      // fileFilter: (req, file, cb) => {
+      //   if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+      //     return cb(null, false);
+      //   }
+      //   cb(null, true);
+      // },
+    }),
+  )
+  uploadFile(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('File is not an Image');
+    } else {
+      const response = {
+        filePath: `http://localhost:9000/auth/uploads/${file.filename}`,
+      };
+      return response;
     }
+  }
+
+  // get image
+  @Get('uploads/:filename')
+  getProfileImage(@Param('filename') filename, @Res() res) {
+    return res.sendFile(filename, { root: 'uploads' });
+  }
 }

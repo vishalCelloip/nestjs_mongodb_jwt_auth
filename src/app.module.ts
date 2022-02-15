@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { UserModule } from './Admin_Module/userManagement/user.module';
 import { AuthModule } from './Admin_Module/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
+import { PlateModule } from './Admin_Module/plateManagement/plate.module';
 
 @Module({
   imports: [
@@ -15,12 +16,12 @@ import { ConfigModule } from '@nestjs/config';
       useNewUrlParser: true,
       useUnifiedTopology: true,
       useCreateIndex: true,
-      useFindAndModify:false
+      useFindAndModify: false,
     }),
     UserModule,
     AuthModule,
     AdminModule,
-
+    PlateModule,
   ],
   controllers: [AppController],
   providers: [AppService],
